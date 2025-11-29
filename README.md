@@ -127,7 +127,7 @@ DeviceLogonEvents
 📌 **Finding (answer):** `kenji.sato`  
 🔍 **Evidence:**  
 - **Host:** "azuki-logistics" 
-- **Timestamp:** 2025-11-18T22:44:11.6770861Z   
+- **Timestamp:** 2025-11-18T22:44:11.6770861Z<br/>
 💡 **Why it matters:** Reveals which account within the Domain has been the victim to brute-force or a phishing attack.<br/>
 
 **KQL Query Used:**
@@ -145,43 +145,54 @@ DeviceLogonEvents
 ---
 
 🚩 **Flag 3 – DISCOVERY - Network Reconnaissance**  
-🎯 **Objective:** Identify elevated accounts on the target system.  
-📌 **Finding (answer):** `"powershell.exe" net localgroup Administrators`  
+🎯 **Objective:** Identify any signs of enumerating network topology.  
+📌 **Finding (answer):** `"ARP.EXE" -a`  
 🔍 **Evidence:**  
-- **Host:** nathan-iel-vm  
-- **Timestamp:** 2025-07-18T02:16:21Z  
+- **Host:** "azuki-logistics"  
+- **Timestamp:** 2025-11-19T01:04:05.73442Z 
 - **Process:** powershell.exe  
-- **CommandLine:** `"powershell.exe" net localgroup Administrators`  
-- **SHA256:** `9785001b0dcf755eddb8af294a373c0b87b2498660f724e76c4d53f9c217c7a3`  
-💡 **Why it matters:** Enumerating local Administrators identifies high‑value accounts to target for impersonation/persistence.
+- **CommandLine:** `"ARP.EXE" -a`<br/>
+💡 **Why it matters:**  Identifies intention for lateral movement opportunities and high-value targets.<br/>
+
 **KQL Query Used:**
 ```
 DeviceProcessEvents
-| where DeviceName contains "nathan-iel-vm"
-| where ProcessCommandLine contains "net"
-| project Timestamp, DeviceName, FileName, ProcessCommandLine, ProcessCreationTime,InitiatingProcessCommandLine , InitiatingProcessCreationTime, SHA256
+| where TimeGenerated between (datetime(2025-11-18T22:00:00.00Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where AccountName contains "kenji.sato"
+| where InitiatingProcessCommandLine has_any ("powershell", "cmd")
+| sort by TimeGenerated desc
+| project TimeGenerated, AccountDomain, AccountName, ActionType, ProcessCommandLine
+
 ```
-<img width="867" height="343" alt="Screenshot 2025-08-17 215559" src="https://github.com/user-attachments/assets/99a871c3-c398-42dc-b375-91b7e41851bf" />
+
+<img width="1202" height="613" alt="3rd" src="https://github.com/user-attachments/assets/4581cd3b-45a5-4a4c-ac1c-c1f22fc27a79" />
+
 
 
 ---
 
-🚩 **Flag 4 – Active Session Discovery**  
-🎯 **Objective:** Reveal which sessions are currently active for potential masking.  
-📌 **Finding (answer):** `qwinsta.exe`  
+🚩 **Flag 4 – DEFENCE EVASION - Malware Staging Directory**  
+🎯 **Objective:**  Identify the primary malware directory. 
+📌 **Finding (answer):** `C:\ProgramData\WindowsCache`  
 🔍 **Evidence:**  
-- **Host:** nathan-iel-vm  
-- **Timestamp:** ~2025-07-18T02:17:29Z  
-- **Process:** `"powershell.exe" qwinsta` → spawned **qwinsta.exe**  
-💡 **Why it matters:** Live session enumeration enables “ride‑along” with existing users to reduce new‑logon noise and increase stealth.
+- **Host:** "azuki-sl"  
+- **Timestamp:** 2025-11-19T19:05:33.7665036Z 
+- **Process:** `"attrib.exe" +h +s C:\ProgramData\WindowsCache`<br/>
+💡 **Why it matters:** It reveal's the scope of compromise and helps locate additional malicious artefacts.<br/>
+
 **KQL Query Used:**
 ```
 DeviceProcessEvents
-| where DeviceName contains "nathan-iel-vm"
-| where ProcessCommandLine contains "qwinsta"
-| project Timestamp, DeviceName, FileName, ProcessCommandLine, ProcessCreationTime,InitiatingProcessCommandLine , InitiatingProcessCreationTime, SHA256
+| where Timestamp between (datetime(2025-11-18T22:00:00.00Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where DeviceName has_any ("azuki-sl", "azuki-kslog", "azuki-logks", "azuki-wks01", "azuki-logistics")
+| where ActionType == "ProcessCreated"
+| where ProcessCommandLine has_any ("+h", "+s")
+| project Timestamp, AccountDomain, AccountName, DeviceName, FileName, FolderPath, ProcessCommandLine, ProcessRemoteSessionIP, ProcessRemoteSessionDeviceName
+| sort by Timestamp desc
+
 ```
-<img width="729" height="610" alt="Screenshot 2025-08-17 214913" src="https://github.com/user-attachments/assets/ddd32254-a7d9-4e9c-b4be-c854593f3378" />
+<img width="1138" height="659" alt="Flag4" src="https://github.com/user-attachments/assets/41ee5c2b-9836-46bb-bf45-5ce9596885d0" />
+
 
 ---
 
