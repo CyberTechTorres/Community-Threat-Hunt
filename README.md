@@ -19,42 +19,75 @@ In the month of Novermber 2025 , Azuki Import/Export Trading Co has been targett
 | **2025-11-18T22:44:11Z** | Flag 1   | Initial Remote Access via RDP                | Inbound Remote IP 88.97.178.12                          |
 | **2025-11-18T22:44:11Z** | Flag 2   | Compromised User Account                     | `kenji.sato`                                            |
 | **2025-11-19T01:04:05Z** | Flag 3   | Enumerating network topology                 | `ARP.EXE -a` Command Executed                           |
-| **2025-11-19T19:05:33Z** | Flag 4   | Malware Staging Directory Created            | `C:\ProgramData\WindowsCache`                           |
-| **2025-11-19T18:49:29Z** | Flag 5   | File Extension Excluding for Evasion         | RegistryValueName's `.bat, .ps1, .exe` Excluded         |
+| **2025-11-19T18:37:40Z** | Flag 18  | Malicious Script Method                      | `wupdate.ps1` Downloaded Externally for Execution       |
 | **2025-11-19T18:49:27Z** | Flag 6   | Folder Excluded for Evasion                  | `C:\Users\KENJI~1.SAT\AppData\Local\Temp`               |
+| **2025-11-19T18:49:29Z** | Flag 5   | File Extension Excluding for Evasion         | RegistryValueName's `.bat, .ps1, .exe` Excluded         |
+| **2025-11-19T19:05:33Z** | Flag 4   | Malware Staging Directory Created            | `C:\ProgramData\WindowsCache`                           |
 | **2025-11-19T19:07:21Z** | Flag 7   | Download Binary Abuse                        | `certutil.exe` for Fetching Downloads                   |
+| **2025-11-19T19:07:22Z** | Flag 12  | Credential Dumping Tool Usage                | `mm.exe`                                                |
 | **2025-11-19T19:07:46Z** | Flag 8   | Persistence As Scheduled Task                | schtask.exe /create /tn `Windows Update Check`          |
 | **2025-11-19T19:07:46Z** | Flag 9   | Scheduled Task Folder Path Creation          | `C:\ProgramData\WindowsCache\svchost.exe`               |
-| **2025-11-19T19:11:04Z** | Flag 10  | Connection to C2 Server                      | Remote IP `78.141.196.6`                                |
-| **2025-11-19T19:11:04Z** | Flag 11  | Port Connectivity to C2 Server               | HTTPS / 443                                             |
-| **2025-11-19T19:07:22Z** | Flag 12  | Credential Dumping Tool Usage                | `mm.exe`                                                |
 | **2025-11-19T19:08:26Z** | Flag 13  | Type of Memory Extraction Module             | Mimikatz sekurlsa logonpasswords module                 |
 | **2025-11-19T19:08:58Z** | Flag 14  | Data Staging Archive `export-data.zip`       | Compressed Company Data                                 |
 | **2025-11-19T19:09:21Z** | Flag 15  | File Upload to Cloud Services                | 443 port connectivity to `discord.com`                  |
-| **2025-11-19T19:11:39Z** | Flag 16  | Log clearing via `wevtutil`                  | Cleared Security, System, and App logs by `cl` command  |
 | **2025-11-19T19:09:48Z** | Flag 17  | Creation Of Hidden Account                   | Account With Elevated Rights called `support`           |
-| **2025-11-19T18:37:40Z** | Flag 18  | Malicious Script Method                      | `wupdate.ps1` Downloaded Externally for Execution       |
-| **2025-11-19T19:10:37Z** | Flag 19  | Targeted IP for Lateral Movement             | `cmdkey.exe" /list` followed by `cmdkey.exe /generic:10.1.0.188 /user:fileadmin /pass:**********`
-| **2025-11-22T00:38:47Z** | Flag 20  | Tool for Lateral Movement                    | `mstsc.exe /V:` Used for RDP Connectivity to 10.1.0.188     |
+| **2025-11-19T19:10:37Z** | Flag 19  | Targeted IP for Lateral Movement             | `cmdkey.exe" /list` followed by `cmdkey.exe /generic:10.1.0.188 /user:fileadmin /pass:**********` |
+| **2025-11-19T19:10:41Z** | Flag 20  | Tool for Lateral Movement                    | `mstsc.exe /V:` Used for RDP Connectivity to 10.1.0.188 |
+| **2025-11-19T19:11:04Z** | Flag 10  | Connection to C2 Server                      | Remote IP `78.141.196.6`                                |
+| **2025-11-19T19:11:04Z** | Flag 11  | Port Connectivity to C2 Server               | HTTPS / 443                                             |
+| **2025-11-19T19:11:39Z** | Flag 16  | Log clearing via `wevtutil`                  | Cleared Security, System, and App logs by `cl` command  |
+
+
 
 ---
 ### Starting Point – Identifying the Initial System
 
 **Objective:**
-Determine where to begin hunting based on provided indicators such as HR related stuffs or tools were recently touched...over the mid-july weekends.
+Determine where initial access was obtained to validate the incident timeline. 
 
-**Host of Interest (Starting Point):** `nathan-iel-vm`  
-**Why:** HR tooling/scripts activity on July 18th; anchor of suspicious operations.
+
+Considering intelligence related to the “JADE SPIDER” threat actor, the typical dwell time ranges from approximately 21 to 45 days, with the most recent observed activity reported in November. <br/>
+Based on this, the investigation window was set from 45 days prior through the current date range of interest, specifically 2025-10-09T00:00:00.0000000Z to 2025-11-22T23:00:00.0000000<br/>
+Endpoint Device in question that has been compromised is "azuki-sl".<br/>
+I will filter for interactive Logontype which can indicate a public remote IP.<br/>
+
+**Host of Interest (Starting Point):** `azuki-sl`  
+**Why:** Admin Account with desired data useful for adversary.
 **KQL Query Used:**
 ```
-DeviceProcessEvents
-| where Timestamp between (datetime(2025-07-01) .. datetime(2025-07-31))
-| where ProcessCommandLine contains "HR"
-| where ProcessCommandLine contains "tool"
-| summarize Count = count() by DeviceName
-| sort by Count desc
+DeviceLogonEvents
+| where AccountDomain contains "azuki-sl"
+| where TimeGenerated between (datetime(2025-10-09T00:00:00.0000000Z) .. datetime(2025-11-22T23:00:00.0000000Z))
+| where DeviceName contains "azuki-sl"
+| where LogonType contains "Interactive"
+| where isnotempty(RemoteIP)
+| sort by TimeGenerated desc
 ```
-<img width="428" height="258" alt="Screenshot 2025-08-17 213533" src="https://github.com/user-attachments/assets/116cd420-68e4-4dc7-8b44-fcb2d85bf242" />
+
+<img width="1151" height="359" alt="1st" src="https://github.com/user-attachments/assets/3169d930-d582-4941-b071-b28bcc6701e7" />
+The user account kenji.sato on device azuki-sl shows remote access activity from IP address 159.26.106.98.<br/> 
+Let’s query specifically for the earliest instance where this account established a remote session from any external source.<br/> 
+After all it's the AccountNames (not necessarily the domain) that are compromised first which is the initial source of malicious actions.<br/> 
+
+**KQL Query Used:**
+```
+DeviceLogonEvents
+| where TimeGenerated between (datetime(2025-10-09T00:00:00.00Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where AccountName contains "kenji.sato"
+| where LogonType contains "Interactive"
+| where isnotempty(RemoteIP)
+| where RemoteIPType contains "Public"
+| sort by TimeGenerated desc
+
+```
+<img width="1128" height="495" alt="2nd" src="https://github.com/user-attachments/assets/478978cf-38f4-43dd-b732-af0d1f581318" />
+
+Logs show a TimeGenerated frame between 11/18/2025 and 11/22/2025<br/>
+(2025-11-18T22:44:11.6770861Z - 2025-11-22T00:27:58.4166424Z)
+This will now be the new timeframe to query moving forward.<br/>
+
+Here I see all the different Devices the user kenji.sato has accessed. "azuki-sl", "azuki-kslog", "azuki-logks", "azuki-wks01", "azuki-logistics"<br/>
+First log that shows signs of a suspicious RemoteIP accessing this account via RDP due to its LogonType being "RemoteInteractive" is 88.97.178.12 with Timestamp of 2025-11-18T22:44:11.6770861Z
 
 
 ---
@@ -63,49 +96,55 @@ DeviceProcessEvents
 
 ---
 
-🚩 **Flag 1 – Initial PowerShell Execution Detection**  
-🎯 **Objective:** Pinpoint the earliest suspicious PowerShell activity that marks the intruder's possible entry.  
-📌 **Finding (answer):** **2025-07-19T02:07:43.9041721Z**  
-🔍 **Evidence:**  
-- **Host:** nathan-iel-vm  
-- **Timestamp:** 2025-07-18 ~02:07:42Z (console), earliest creation at **2025-07-19T02:07:43.9041721Z**  
-- **Process:** powershell.exe → `whoami.exe /all`  
-- **CommandLine:** `"powershell.exe" whoami /all`  
-- **SHA256:** `9785001b0dcf755eddb8af294a373c0b87b2498660f724e76c4d53f9c217c7a3`  
-💡 **Why it matters:** Establishes the first malicious PowerShell usage to enumerate identity/privileges, anchoring the intrusion timeline.
+🚩 **Flag 1 – INITIAL ACCESS - Remote Access Source**  
+🎯 **Objective:** Determine initial access from any external connections.  
+📌 **Finding (answer):** **88.97.178.12**  
+🔍 **Evidence:**
+- **Host:** "azuki-logistics"  
+- **Timestamp:** 2025-11-18T22:44:11.6770861Z  
+- **Process:** Interactive external RDP connection<br/>
+💡 **Why it matters:** Origin helps with threat actor attribution and can block ongoing attacks.<br/>
+
 **KQL Query Used:**
 ```
-DeviceProcessEvents
-| where DeviceName contains "nathan-iel-vm"
-| where ProcessCommandLine contains "who"
-| project Timestamp, DeviceName, FileName, ProcessCommandLine, ProcessCreationTime,InitiatingProcessCommandLine , InitiatingProcessCreationTime, SHA256
+DeviceLogonEvents
+| where TimeGenerated between (datetime(2025-10-09T00:00:00.00Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where AccountName contains "kenji.sato"
+| where LogonType contains "Interactive"
+| where isnotempty(RemoteIP)
+| where RemoteIPType contains "Public"
+| sort by TimeGenerated desc
+
 ```
-<img width="528" height="313" alt="Screenshot 2025-08-17 213848" src="https://github.com/user-attachments/assets/529a90cb-083e-43b8-a0ad-85aa9ed5a3b2" />
+<img width="1128" height="495" alt="2nd" src="https://github.com/user-attachments/assets/b39d6820-8a7c-455c-ae73-eb4a4909cdc6" />
+
 
 
 ---
 
-🚩 **Flag 2 – Local Account Assessment**  
-🎯 **Objective:** Map user accounts and privileges available on the system.  
-📌 **Finding (answer):** `SHA256 = 9785001b0dcf755eddb8af294a373c0b87b2498660f724e76c4d53f9c217c7a3`  
+🚩 **Flag 2 – INITIAL ACCESS - Compromised User Account**  
+🎯 **Objective:** Which account credentials were compromised? 
+📌 **Finding (answer):** `kenji.sato`  
 🔍 **Evidence:**  
-- **Host:** nathan-iel-vm  
-- **Timestamp:** 2025-07-18T02:07:42Z  
-- **Process:** `"powershell.exe" whoami /all`  
-- **SHA256:** `9785001b0dcf755eddb8af294a373c0b87b2498660f724e76c4d53f9c217c7a3`  
-💡 **Why it matters:** `whoami /all` reveals group memberships/privileges; classic recon to plan escalation.
+- **Host:** "azuki-logistics" 
+- **Timestamp:** 2025-11-18T22:44:11.6770861Z   
+💡 **Why it matters:** Reveals which account within the Domain has been the victim to brute-force or a phishing attack.<br/>
+
 **KQL Query Used:**
 ```
-DeviceProcessEvents
-| where DeviceName contains "nathan-iel-vm"
-| where ProcessCommandLine contains "who"
-| project Timestamp, DeviceName, FileName, ProcessCommandLine, ProcessCreationTime,InitiatingProcessCommandLine , InitiatingProcessCreationTime, SHA256
+DeviceLogonEvents
+| where AccountDomain contains "azuki-sl"
+| where TimeGenerated between (datetime(2025-10-09T00:00:00.0000000Z) .. datetime(2025-11-22T23:00:00.0000000Z))
+| where DeviceName contains "azuki-sl"
+| where LogonType contains "Interactive"
+| where isnotempty(RemoteIP)
+| sort by TimeGenerated desc
+
 ```
-<img width="824" height="264" alt="Screenshot 2025-08-17 215913" src="https://github.com/user-attachments/assets/166aa43f-47b0-4dba-8cd1-8dd7bf413c37" />
 
 ---
 
-🚩 **Flag 3 – Privileged Group Assessment**  
+🚩 **Flag 3 – DISCOVERY - Network Reconnaissance**  
 🎯 **Objective:** Identify elevated accounts on the target system.  
 📌 **Finding (answer):** `"powershell.exe" net localgroup Administrators`  
 🔍 **Evidence:**  
