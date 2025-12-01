@@ -96,7 +96,7 @@ First log that shows signs of a suspicious RemoteIP accessing this account via R
 
 ---
 
-🚩 **Flag 1 – INITIAL ACCESS - Remote Access Source**  
+🚩 **Flag 1 – INITIAL ACCESS - Remote Access Source** <br/>
 🎯 **Objective:** Determine initial access from any external connections.<br/>
 :brain: **Thought Process:** Refer to "Starting Point" section<br/>
 📌 **Finding (answer):** **88.97.178.12**  
@@ -124,12 +124,13 @@ DeviceLogonEvents
 ---
 
 🚩 **Flag 2 – INITIAL ACCESS - Compromised User Account**  
-🎯 **Objective:** Which account credentials were compromised? 
+🎯 **Objective:** Identify which account credentials were compromised.<br/>
 :brain: **Thought Process:** Refer to "Starting Point" section.<br/>
 📌 **Finding (answer):** `kenji.sato`  
 🔍 **Evidence:**  
-- **Host:** "azuki-logistics" 
-- **Timestamp:** 2025-11-18T22:44:11.6770861Z<br/>
+- **Host:** "azuki-logistics"
+- **Timestamp:** 2025-11-18T22:44:11.6770861Z
+-  **LogonType:** RemoteInteractive<br/>
 💡 **Why it matters:** Reveals which account within the Domain has been the victim to brute-force or a phishing attack.<br/>
 
 **KQL Query Used:**
@@ -179,8 +180,10 @@ DeviceProcessEvents
 ---
 
 🚩 **Flag 4 – DEFENCE EVASION - Malware Staging Directory**  
-🎯 **Objective:**  Identify the primary malware directory. 
-:brain: **Thought Process:**  <br/>
+🎯 **Objective:**  Identify the primary malware directory.<br/> 
+:brain: **Thought Process:** I will now look to see for a staging directory by looking for specific processcommandline commands in which contain any "+h" or "+s" which creates a directory hidden from view. This would be a threat actors choice to evade detection. I will include all devicename's in question that's been likely compromised.
+Query shows a folder called WindowsCache with a path of: C:\ProgramData\WindowsCache using both the +h and +s arguments
+While there's multiple suspicious staging directories detected across multiple devices, the one in particular with ProcessRemoteSessionIP being from an external source (192.168.1.45) indicates it was the Primary staging directory before threat actor performed internal lateral movement onto other devices.<br/>
 📌 **Finding (answer):** `C:\ProgramData\WindowsCache`  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"  
@@ -204,9 +207,9 @@ DeviceProcessEvents
 
 ---
 
-🚩 **Flag 5 – DEFENCE EVASION - File Extension Exclusions**  
-🎯 **Objective:** Look for any possible Window Defender file extension exclusions and count them.  
-:brain: **Thought Process:**  <br/>
+🚩 **Flag 5 – DEFENCE EVASION - File Extension Exclusions**<br/>
+🎯 **Objective:** Look for any possible Window Defender file extension exclusions and count them.<br/> 
+:brain: **Thought Process:** Looking into Windows Registry Keys for any modifications to Windows Defender under all the compromised Device names. I notice 3 Exclusions being set.<br/>
 📌 **Finding (answer):** 3  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"  
@@ -232,8 +235,8 @@ DeviceRegistryEvents
 ---
 
 🚩 **Flag 6 – DEFENCE EVASION - Temporary Folder Exclusion**  
-🎯 **Objective:** Find folder path exclusions to Windows Defender to prevent scanning of directories. 
-:brain: **Thought Process:**  <br/>
+🎯 **Objective:** Find folder path exclusions to Windows Defender to prevent scanning of directories.<br/> 
+:brain: **Thought Process:** Continuing to look into Registry keys associated with windows defender I will now gear towards specific folders in which possibly have been modified to be undetected/ignored. Such registry key is under Windows Defender\\Exclusions\\Paths. It is known for temp folders to be taken advantage by threat actors. We know its "azuki-sl" for our targeted device. Looking specifically at "azuki-sl' logs we see the temp folder.<br/>
 📌 **Finding (answer):** `C:\Users\KENJI~1.SAT\AppData\Local\Temp`  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"  
@@ -258,9 +261,17 @@ DeviceRegistryEvents
 ---
 
 🚩 **Flag 7 – DEFENCE EVASION - Download Utility Abuse**  
-🎯 **Objective:** Identify legitimate system utilities used to download malware. 
-:brain: **Thought Process:**  <br/>
-📌 **Finding (answer):** `certutil.exe` 
+🎯 **Objective:** Identify legitimate system utilities used to download malware.<br/> 
+:brain: **Thought Process:** With the suspicious initiatingremotesessionIP being 192.168.1.45 consistently being associated with previous logs findings, it goes to show this is actually the IP doing all the current malicious actions but wasn't necessarily the 
+IP with Initial access. 
+This IP will be included into the query to filter results. Domain azuki-sl is in question so I will be keeping that as our Device Name. 
+I projected minimally and useful information to look through for any windows native tools that could have been used to download malware to avoid detection. 
+We know Invoke-Webrequest is very common and not the stealthiest command but its considered.
+I'm presented with 42 logs in which I will look through the ProcessCommandLine's for any IP/URL/URI 's 
+"certutil.exe" looks to have been used to download externally.
+I noticed also curl.exe being used but doesn't show it was used to download anything externally. 
+<br/>
+📌 **Finding (answer):** `certutil.exe`<br/>
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"  
 - **Timestamps:** 2025-11-19T19:07:21.0804181Z  
@@ -288,8 +299,11 @@ DeviceProcessEvents
 ---
 
 🚩 **Flag 8 – PERSISTENCE - Scheduled Task Name**  
-🎯 **Objective:**  Identify the name of the scheduled task created for persistence. 
-:brain: **Thought Process:**  <br/>
+🎯 **Objective:**  Identify the name of the scheduled task created for persistence. <br/>
+:brain: **Thought Process:** Lets look to see for any possible persistence in scheduled tasks before looking into Run keys. 
+schtasks.exe with \create parameter is used in processcommandline for such creations so we will filter using that.
+Only 3 such logs were identified under the same azuki-sl and 192.168.1.45 IP.
+We notice a suspicious "Windows Update Check" has been created and added into scheduled tasks during the compromise time frame and the process creation is associated with the malicious IP.<br/>
 📌 **Finding (answer):** `Windows Update Check`  
 🔍 **Evidence:** 
 - **Host:** "azuki-sl"  
@@ -314,10 +328,10 @@ DeviceProcessEvents
 
 ---
 
-🚩 **Flag 9 – PERSISTENCE - Scheduled Task Target**  
-🎯 **Objective:** Identify the executable path configured in the scheduled task.  
-:brain: **Thought Process:**  <br/>
-📌 **Finding (answer):** `C:\ProgramData\WindowsCache\svchost.exe`
+🚩 **Flag 9 – PERSISTENCE - Scheduled Task Target**<br/>
+🎯 **Objective:** Identify the executable path configured in the scheduled task.<br/>  
+:brain: **Thought Process:** Using the same query used in Flag 8 and looking at the ProcessCommandLine the "/tr C:\ProgramData\WindowsCache\svchost.exe" is what defines the executable path.<br/>
+📌 **Finding (answer):** `C:\ProgramData\WindowsCache\svchost.exe`<br/>
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"  
 - **Timestamp:** 2025-11-19T19:07:46.9796512Z
@@ -339,8 +353,10 @@ DeviceProcessEvents
 ---
 
 🚩 **Flag 10 – COMMAND & CONTROL - C2 Server Address**  
-🎯 **Objective:** Identify the IP address of the command and control server. 
-:brain: **Thought Process:**  <br/>
+🎯 **Objective:** Identify the IP address of the command and control server. <br/>
+:brain: **Thought Process:** Looking to see for any outbound connections after malware was installed. This malware assist in accomplishing such connections. These connections indicate a possible C2 server.
+I will include the malware location as the initiatingProcessFolderPath. 
+The only IP initiated from the malware location is 78.141.196.6.<br/>
 📌 **Finding (answer):** Unusual outbound connection → **78.141.196.6**  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl" | **ActionType:** "ConnectionSuccess"  
@@ -362,8 +378,8 @@ DeviceNetworkEvents
 ---
 
 🚩 **Flag 11 – COMMAND & CONTROL - C2 Communication Port**  
-🎯 **Objective:** Identify the destination port used for command and control communications. 
-:brain: **Thought Process:**  <br/>
+🎯 **Objective:** Identify the destination port used for command and control communications.<br/> 
+:brain: **Thought Process:** Looking at the same log in Flag 10 we are shown the port the C2 IP is utilizing.<br/>
 📌 **Finding (answer):** Port 443   
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"  
@@ -386,8 +402,11 @@ DeviceNetworkEvents
 ---
 
 🚩 **Flag 12 – CREDENTIAL ACCESS - Credential Theft Tool**  
-🎯 **Objective:** Identify the filename of the credential dumping tool.  
-:brain: **Thought Process:**  <br/>
+🎯 **Objective:** Identify the filename of the credential dumping tool. <br/> 
+:brain: **Thought Process:** Looking for credential dumping tools I will now pivot into DeviceFileEvents. 
+Such tools would be placed into the malware location we found previously in C:\\ProgramData\\WindowsCache.
+Query will be filtered with folderpath correlating to that location. 
+I'm shown a download externally from http://78.141.196.6:8080/AdobeGC.exe and put into C:\ProgramData\WindowsCache and named ass "mm.exe".<br/>
 📌 **Finding (answer):** `mm.exe`  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"
@@ -415,7 +434,11 @@ DeviceFileEvents
 
 🚩 **Flag 13 – CREDENTIAL ACCESS - Memory Extraction Module**  
 🎯 **Objective:**  Identify the module used to extract logon passwords from memory.<br/>
-:brain: **Thought Process:**  <br/>
+:brain: **Thought Process:** I will now look to see for any executions made from this "mm.exe".
+Any logs indicating any process events from such malware will indicate what the tool was used for exactly. 
+In DeviceProcessEvents I will include the FileName "mm.exe".
+Only 1 log is shown and processcommandline shows sekurlsa::logonpasswords is executed. 
+This is a module and command is a memory extraction module.<br/>
 📌 **Finding (answer):** `sekurlsa::logonpasswords` <br/>
 🔍 **Evidence:**  
 - **Host:** "azuki-sl" 
@@ -438,8 +461,8 @@ DeviceProcessEvents
 ---
 
 🚩 **Flag 14 – COLLECTION - Data Staging Archive**  
-🎯 **Objective:** Identify the compressed archive filename used for data exfiltration.  
-:brain: **Thought Process:**  <br/>
+🎯 **Objective:** Identify the compressed archive filename used for data exfiltration.<br/>
+:brain: **Thought Process:** Considering this credential dumping tool was downloaded and the threat actor executed memory extraction to obtain usernames and passwords. I will now be looking for this stolen collected data which is usually compressed and located in same malware folder. I will specifically look for any zip files after the creation and execution of mm.exe.<br/>
 📌 **Finding (answer):** `export-data.zip`<br/>
 🔍 **Evidence:**  <br/>
 - **Host:** "azuki-sl"
@@ -464,7 +487,15 @@ DeviceFileEvents
 
 🚩 **Flag 15 – EXFILTRATION - Exfiltration Channel**  
 🎯 **Objective:** Identify the cloud service used to exfiltrate stolen data.  
-:brain: **Thought Process:**  <br/>
+:brain: **Thought Process:** DeviceNetworkEvents will provide us details to see what IP or URL the data export.zip file was exported to.
+We know mm.exe was created at this time stamp: 2025-11-19T19:07:22.8551193Z
+We also know the last malicious log event is at: 2025-11-22T23:00:00.00Z.<br/>
+
+Data export had to have been after the creation of mm.exe so that will be our beginning timestamp. 
+Targeting 443 & 80 port due to a common exfiltration technique is using cloud web services. This will be our remoteport filter. 
+The data file in question that will be exported we know is "export-data.zip"
+This file would be called for to initiate a upload so I will filter for InitiatingProcessCommandLine to include any syntax of "export-data".
+What I'm shown is the suspicious RemoteIP connection with its RemoteURL.<br/>
 📌 **Finding (answer):** `discord`  
 🔍 **Evidence:**  
 - **Timestamp:** 2025-11-19T19:09:21.4234133Z
@@ -491,8 +522,8 @@ DeviceNetworkEvents
 
 
 🚩 **Flag 16 – ANTI-FORENSICS - Log Tampering**  
-🎯 **Objective:** Identify the first Windows event log cleared by the attacker.  
-:brain: **Thought Process:**  <br/>
+🎯 **Objective:** Identify the first Windows event log cleared by the attacker. <br/> 
+:brain: **Thought Process:** Log clearing being a common defensive evading technique, I used this query and looked through all 31 results for any "cl" arguments. Only 3 out of those logs which were at the bottom of the list in desc order actually had the "cl" command along with "wevtutil".<br/>
 📌 **Finding (answer):** `Security`  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"
@@ -518,8 +549,8 @@ DeviceProcessEvents
 ---
 
 🚩 **Flag 17 – IMPACT - Persistence Account**  
-🎯 **Objective:** Identify the backdoor account username created by the attacker.  
-:brain: **Thought Process:**  <br/>
+🎯 **Objective:** Identify the backdoor account username created by the attacker. <br/> 
+:brain: **Thought Process:** Looking to see if there's any persistence with account creations. I will focus on the processcommandline for any "/add" and the initiatingProcessFileName being "powershell" since this threat actor shows consistent use of making his actions through powershell.<br/>
 📌 **Finding (answer):** `support`  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"
@@ -545,8 +576,10 @@ DeviceProcessEvents
 ---
 
 🚩 **Flag 18 – EXECUTION - Malicious Script**  
-🎯 **Objective:** Identify the PowerShell script file used to automate the attack chain. 
-:brain: **Thought Process:**  <br/>
+🎯 **Objective:** Identify the PowerShell script file used to automate the attack chain.<br/>
+:brain: **Thought Process:** When looking for any malicious scripts to automate their attack chain, this usually consist of fetching external scripts. 
+I will search in DeviceFileEvents for the initiatingprocesscommandline that consist of Invoke-WebRequest and consist of any .bat, .ps1, .py files.
+Looking through the 19 results the first detected logs consist of a Invoke-WebRequest downloaded a wupdate.ps1 file.<br/>
 📌 **Finding (answer):** `wupdate.ps1`  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"
@@ -574,10 +607,12 @@ DeviceFileEvents
 
 ---
 
-🚩 **Flag 19 – LATERAL MOVEMENT - Secondary Target**  
-🎯 **Objective:** Identify the IP address targeted for lateral movement.  
-:brain: **Thought Process:**  <br/>
-📌 **Finding (answer):** 10.1.0.188 
+🚩 **Flag 19 – LATERAL MOVEMENT - Secondary Target**<br/>
+🎯 **Objective:** Identify the IP address targeted for lateral movement.<br/>  
+:brain: **Thought Process:** Any indicators of mstsc.exe or cmdkey.exe utilization by this threat actor will show signs of lateral movement intent.  
+I will filter any processevents in the command line for any mstsc or cmdkey. 
+`"cmdkey.exe" /list` executed first then followed by... cmdkey execution targeting 10.1.0.188. Threat actor sets a generic key and sets username and password.<br/>
+📌 **Finding (answer):** 10.1.0.188 <br/>
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"
 - **Timestamp:** 2025-11-19T19:10:37.2625077Z
@@ -604,8 +639,8 @@ DeviceProcessEvents
 ---
 
 🚩 **Flag 20 – LATERAL MOVEMENT - Remote Access Tool**  
-🎯 **Objective:** Identify the remote access tool used for lateral movement.  
-:brain: **Thought Process:**  <br/>
+🎯 **Objective:** Identify the remote access tool used for lateral movement.<br/> 
+:brain: **Thought Process:** Using same query in Flag 19, I'm shown a RDP connection to a specific private IP within the organization of 10.1.0.188 as `"mstsc.exe" /V:10.1.0.188`.<br/>
 📌 **Finding (answer):** `mstsc.exe`  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"
