@@ -694,10 +694,11 @@ DeviceProcessEvents
 
 ---
 
-## Recommended Actions (Condensed)
-1. Reset/rotate credentials (HR/IT/admin).  
-2. Re-enable & harden Defender; deploy fresh Sysmon config.  
-3. Block/monitor `*.pipedream.net` and related IPs (e.g., **52.54.13.125**).  
-4. Integrity review/restore HR data (`PromotionCandidates.csv`, Carlos Tanaka records).  
-5. Hunt for persistence across estate; remove `OnboardTracker.ps1` autoruns.  
-6. Centralize logs; add detections for `comsvcs.dll, MiniDump` and Defender tamper.
+## Recommended Actions
+1. **Isolate all Devices** ("azuki-sl", "azuki-kslog", "azuki-logks", "azuki-wks01", "azuki-logistics", "azuki-fileserver01")
+2. **Invalidate & Reset credentials** (User account "kenji.sato" and "support")
+3. **Block all malicious IP's** (88.97.178.12, 159.26.106.98, 192.168.1.45, 78.141.196.6, 162.159.135.232)
+4. **Eradication and recovery** (Reimage all systems)  
+5. **Detection Action** (Convert the successful KQL hunt queries into scheduled analytics or detection rules.)
+6. **Harden Standards/Policies** (Restrict PowerShell and scripting, tighten RDP and remote admin access, enforce least privilege)
+7. **Documentation and Lessons learned** (Document the full attack chain, run a tabletop excercise of same scenario)
