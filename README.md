@@ -10,7 +10,7 @@ Timeframe: November, 2025
 
 ## Executive Summary
 
-In the month of Novermber 2025 , Azuki Import/Export Trading Co has been targetted by a financially motivated threat actor targeting import/export companies. The adversary leveraged (enter kill chain here) and anti-forensics measures to achieve their objectives. Each flag represents a key stage of the attack chain, culminating in attempts to cover tracks and exit the environment undetected.
+In the month of Novermber 2025 , Azuki Import/Export Trading Co has been targetted by a financially motivated threat actor targeting import/export companies. The adversary established Initial Access, Weaponization with Delivery, Persistence with Evade Detection, and while connecting to a C2 server to achieve their objectives. Each flag represents a key stage of the attack chain, culminating in attempts to cover tracks and exit the environment undetected.
 
 ## Timeline
 
