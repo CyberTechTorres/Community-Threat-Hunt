@@ -609,22 +609,29 @@ DeviceProcessEvents
 
 
 
-## MITRE ATT&CK (Quick Map)
-- **Initial Access:** – Flags 1, 2
-  -T1078: Flags 1 & 2
-- **Execution:** T1059 (PowerShell) – Flags 3, 7, 18  
-- **Persistence:** – Flag 8, 9, 17
-  -T1053.005:
-  -T1098: Flag 17
-  -T1564.002: Flag 17
-- **Credential Access:** T1003.001 (LSASS dump) – Flags 12, 13   
-- **Discovery:** T1018 (ARP.EXE -a) – Flag 3  
-- **Lateral Movement:** – Flags 19, 20
-  -T1550.002: Flag 19
-  -T1021.001: Flag 20
-- **Command & Control:** – Flags 10, 11, 15  
-- **Defense Evasion:** T1070.001 – Flags 5, 6, 14, 16
-- **Impact:** – Flags 17
+## MITRE ATT&CK
+- **Initial Access:** – Flags 1, 2<br/>
+  -T1078: Flags 1 & 2<br/>
+- **Execution:** T1059 (PowerShell) – Flags 7, 18<br/>
+  -T1105: Flag 7<br/>
+  -T1059: Flag 18<br/>
+- **Persistence:** – Flag 8, 9, 17<br/>
+  -T1053.005: Flag 8, 9<br/>
+  -T1098: Flag 17<br/>
+  -T1564.002: Flag 17<br/>
+- **Credential Access:** T1003 – Flags 12, 13<br/>
+- **Discovery:** T1018 – Flag 3<br/>
+- **Lateral Movement:** – Flags 19, 20<br/>
+  -T1550.002: Flag 19<br/>
+  -T1021.001: Flag 20<br/>
+- **Command & Control:** T1071.001 – Flags 10, 11<br/>
+- **Exfiltration:** - Flag 14, 15<br/>
+  -T1560: Flag 14<br/>
+  -T1567: Flag 15<br/>
+- **Defense Evasion:** – Flags 4, 5, 6, 16<br/>
+  -T1036: Flag 4<br/>
+  -T1564.012: Flag 5, 6<br/>
+  -T1070.001: Flag 16<br/>
 
 ---
 
