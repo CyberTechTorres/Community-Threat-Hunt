@@ -97,7 +97,8 @@ First log that shows signs of a suspicious RemoteIP accessing this account via R
 ---
 
 🚩 **Flag 1 – INITIAL ACCESS - Remote Access Source**  
-🎯 **Objective:** Determine initial access from any external connections.  
+🎯 **Objective:** Determine initial access from any external connections.<br/>
+:brain: **Thought Process:** Refer to "Starting Point" section<br/>
 📌 **Finding (answer):** **88.97.178.12**  
 🔍 **Evidence:**
 - **Host:** "azuki-logistics"  
@@ -124,6 +125,7 @@ DeviceLogonEvents
 
 🚩 **Flag 2 – INITIAL ACCESS - Compromised User Account**  
 🎯 **Objective:** Which account credentials were compromised? 
+:brain: **Thought Process:** Refer to "Starting Point" section.<br/>
 📌 **Finding (answer):** `kenji.sato`  
 🔍 **Evidence:**  
 - **Host:** "azuki-logistics" 
@@ -146,6 +148,11 @@ DeviceLogonEvents
 
 🚩 **Flag 3 – DISCOVERY - Network Reconnaissance**  
 🎯 **Objective:** Identify any signs of enumerating network topology.  
+:brain: **Thought Process:** It's common for threat actor to proceed with enumerating network topology once they have gained initial access to identify lateral movement opportunities.
+Threat actors will utilize powershell.exe or cmd.exe to execute network specific commands and arguements.
+Query will be tailored towards InitiatingProcessCommandLine for anything containing powershell.exe or cmd.exe.
+Projecting ProcessCommandLine to see the syntax threat actor used.
+I looked at the earliest dates to investigate any suspicious network topology commands.<br/>
 📌 **Finding (answer):** `"ARP.EXE" -a`  
 🔍 **Evidence:**  
 - **Host:** "azuki-logistics"  
@@ -173,6 +180,7 @@ DeviceProcessEvents
 
 🚩 **Flag 4 – DEFENCE EVASION - Malware Staging Directory**  
 🎯 **Objective:**  Identify the primary malware directory. 
+:brain: **Thought Process:**  <br/>
 📌 **Finding (answer):** `C:\ProgramData\WindowsCache`  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"  
@@ -198,6 +206,7 @@ DeviceProcessEvents
 
 🚩 **Flag 5 – DEFENCE EVASION - File Extension Exclusions**  
 🎯 **Objective:** Look for any possible Window Defender file extension exclusions and count them.  
+:brain: **Thought Process:**  <br/>
 📌 **Finding (answer):** 3  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"  
@@ -223,7 +232,8 @@ DeviceRegistryEvents
 ---
 
 🚩 **Flag 6 – DEFENCE EVASION - Temporary Folder Exclusion**  
-🎯 **Objective:** Find folder path exclusions to Windows Defender to prevent scanning of directories.  
+🎯 **Objective:** Find folder path exclusions to Windows Defender to prevent scanning of directories. 
+:brain: **Thought Process:**  <br/>
 📌 **Finding (answer):** `C:\Users\KENJI~1.SAT\AppData\Local\Temp`  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"  
@@ -248,7 +258,8 @@ DeviceRegistryEvents
 ---
 
 🚩 **Flag 7 – DEFENCE EVASION - Download Utility Abuse**  
-🎯 **Objective:** Identify legitimate system utilities used to download malware.  
+🎯 **Objective:** Identify legitimate system utilities used to download malware. 
+:brain: **Thought Process:**  <br/>
 📌 **Finding (answer):** `certutil.exe` 
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"  
@@ -278,6 +289,7 @@ DeviceProcessEvents
 
 🚩 **Flag 8 – PERSISTENCE - Scheduled Task Name**  
 🎯 **Objective:**  Identify the name of the scheduled task created for persistence. 
+:brain: **Thought Process:**  <br/>
 📌 **Finding (answer):** `Windows Update Check`  
 🔍 **Evidence:** 
 - **Host:** "azuki-sl"  
@@ -304,6 +316,7 @@ DeviceProcessEvents
 
 🚩 **Flag 9 – PERSISTENCE - Scheduled Task Target**  
 🎯 **Objective:** Identify the executable path configured in the scheduled task.  
+:brain: **Thought Process:**  <br/>
 📌 **Finding (answer):** `C:\ProgramData\WindowsCache\svchost.exe`
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"  
@@ -326,7 +339,8 @@ DeviceProcessEvents
 ---
 
 🚩 **Flag 10 – COMMAND & CONTROL - C2 Server Address**  
-🎯 **Objective:** Identify the IP address of the command and control server.  
+🎯 **Objective:** Identify the IP address of the command and control server. 
+:brain: **Thought Process:**  <br/>
 📌 **Finding (answer):** Unusual outbound connection → **78.141.196.6**  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl" | **ActionType:** "ConnectionSuccess"  
@@ -348,7 +362,8 @@ DeviceNetworkEvents
 ---
 
 🚩 **Flag 11 – COMMAND & CONTROL - C2 Communication Port**  
-🎯 **Objective:** Identify the destination port used for command and control communications.  
+🎯 **Objective:** Identify the destination port used for command and control communications. 
+:brain: **Thought Process:**  <br/>
 📌 **Finding (answer):** Port 443   
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"  
@@ -372,6 +387,7 @@ DeviceNetworkEvents
 
 🚩 **Flag 12 – CREDENTIAL ACCESS - Credential Theft Tool**  
 🎯 **Objective:** Identify the filename of the credential dumping tool.  
+:brain: **Thought Process:**  <br/>
 📌 **Finding (answer):** `mm.exe`  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"
@@ -399,6 +415,7 @@ DeviceFileEvents
 
 🚩 **Flag 13 – CREDENTIAL ACCESS - Memory Extraction Module**  
 🎯 **Objective:**  Identify the module used to extract logon passwords from memory.<br/>
+:brain: **Thought Process:**  <br/>
 📌 **Finding (answer):** `sekurlsa::logonpasswords` <br/>
 🔍 **Evidence:**  
 - **Host:** "azuki-sl" 
@@ -422,6 +439,7 @@ DeviceProcessEvents
 
 🚩 **Flag 14 – COLLECTION - Data Staging Archive**  
 🎯 **Objective:** Identify the compressed archive filename used for data exfiltration.  
+:brain: **Thought Process:**  <br/>
 📌 **Finding (answer):** `export-data.zip`<br/>
 🔍 **Evidence:**  <br/>
 - **Host:** "azuki-sl"
@@ -446,6 +464,7 @@ DeviceFileEvents
 
 🚩 **Flag 15 – EXFILTRATION - Exfiltration Channel**  
 🎯 **Objective:** Identify the cloud service used to exfiltrate stolen data.  
+:brain: **Thought Process:**  <br/>
 📌 **Finding (answer):** `discord`  
 🔍 **Evidence:**  
 - **Timestamp:** 2025-11-19T19:09:21.4234133Z
@@ -473,6 +492,7 @@ DeviceNetworkEvents
 
 🚩 **Flag 16 – ANTI-FORENSICS - Log Tampering**  
 🎯 **Objective:** Identify the first Windows event log cleared by the attacker.  
+:brain: **Thought Process:**  <br/>
 📌 **Finding (answer):** `Security`  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"
@@ -499,6 +519,7 @@ DeviceProcessEvents
 
 🚩 **Flag 17 – IMPACT - Persistence Account**  
 🎯 **Objective:** Identify the backdoor account username created by the attacker.  
+:brain: **Thought Process:**  <br/>
 📌 **Finding (answer):** `support`  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"
@@ -524,7 +545,8 @@ DeviceProcessEvents
 ---
 
 🚩 **Flag 18 – EXECUTION - Malicious Script**  
-🎯 **Objective:** Identify the PowerShell script file used to automate the attack chain.  
+🎯 **Objective:** Identify the PowerShell script file used to automate the attack chain. 
+:brain: **Thought Process:**  <br/>
 📌 **Finding (answer):** `wupdate.ps1`  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"
@@ -554,6 +576,7 @@ DeviceFileEvents
 
 🚩 **Flag 19 – LATERAL MOVEMENT - Secondary Target**  
 🎯 **Objective:** Identify the IP address targeted for lateral movement.  
+:brain: **Thought Process:**  <br/>
 📌 **Finding (answer):** 10.1.0.188 
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"
@@ -582,6 +605,7 @@ DeviceProcessEvents
 
 🚩 **Flag 20 – LATERAL MOVEMENT - Remote Access Tool**  
 🎯 **Objective:** Identify the remote access tool used for lateral movement.  
+:brain: **Thought Process:**  <br/>
 📌 **Finding (answer):** `mstsc.exe`  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"
