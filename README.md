@@ -610,12 +610,21 @@ DeviceProcessEvents
 
 
 ## MITRE ATT&CK (Quick Map)
-- **Execution:** T1059 (PowerShell) – Flags 1–5, 7–8  
-- **Persistence:** T1547.001 (Run Keys) – Flag 11  
-- **Discovery:** T1033/T1087 (whoami /all; group/user discovery) – Flags 1–3, 4  
-- **Credential Access:** T1003.001 (LSASS dump) – Flag 7 (MiniDump via comsvcs.dll)  
-- **Command & Control / Exfil:** T1071/T1041 – Flags 9–10 (pipedream.net, .net TLD, IP 52.54.13.125)  
-- **Defense Evasion:** T1562.001/002 & T1070.001 – Flags 5–6 (Defender), 14–15 (log clear, Sysmon blind)
+- **Initial Access:** – Flags 1, 2
+  -T1078: Flags 1 & 2
+- **Execution:** T1059 (PowerShell) – Flags 3, 7, 18  
+- **Persistence:** – Flag 8, 9, 17
+  -T1053.005:
+  -T1098: Flag 17
+  -T1564.002: Flag 17
+- **Credential Access:** T1003.001 (LSASS dump) – Flags 12, 13   
+- **Discovery:** T1018 (ARP.EXE -a) – Flag 3  
+- **Lateral Movement:** – Flags 19, 20
+  -T1550.002: Flag 19
+  -T1021.001: Flag 20
+- **Command & Control:** – Flags 10, 11, 15  
+- **Defense Evasion:** T1070.001 – Flags 5, 6, 14, 16
+- **Impact:** – Flags 17
 
 ---
 
