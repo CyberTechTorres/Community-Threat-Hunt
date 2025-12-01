@@ -47,12 +47,12 @@ Determine where initial access was obtained to validate the incident timeline.
 
 
 Considering intelligence related to the “JADE SPIDER” threat actor, the typical dwell time ranges from approximately 21 to 45 days, with the most recent observed activity reported in November. <br/>
-Based on this, the investigation window was set from 45 days prior through the current date range of interest, specifically 2025-10-09T00:00:00.0000000Z to 2025-11-22T23:00:00.0000000<br/>
+Based on this, the investigation window was set from 45 days prior through the current date.<br/>
 Endpoint Device in question that has been compromised is "azuki-sl".<br/>
-I will filter for interactive Logontype which can indicate a public remote IP.<br/>
+I will filter for interactive Logontype which will indicate a public remote IP connection.<br/>
 
 **Host of Interest (Starting Point):** `azuki-sl`  
-**Why:** Admin Account with desired data useful for adversary.
+**Why:** Admin Account has desired data useful for adversary.<br/>
 **KQL Query Used:**
 ```
 DeviceLogonEvents
@@ -67,7 +67,7 @@ DeviceLogonEvents
 <img width="1151" height="359" alt="1st" src="https://github.com/user-attachments/assets/3169d930-d582-4941-b071-b28bcc6701e7" />
 The user account kenji.sato on device azuki-sl shows remote access activity from IP address 159.26.106.98.<br/> 
 Let’s query specifically for the earliest instance where this account established a remote session from any external source.<br/> 
-After all it's the AccountNames (not necessarily the domain) that are compromised first which is the initial source of malicious actions.<br/> 
+After all it's the AccountNames (not necessarily the domain) that are compromised first for the initial entry source.<br/> 
 
 **KQL Query Used:**
 ```
