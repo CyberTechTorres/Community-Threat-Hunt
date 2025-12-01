@@ -2,7 +2,7 @@
 
 Analyst: Andres Torres Richardson
 
-Date Completed: 2025-10-25
+Threat Hunt Date Completed: 2025-10-25
 
 Environment Investigated: AZUKI-SL (IT admin workstation)
 
