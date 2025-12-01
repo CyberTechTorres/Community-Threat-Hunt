@@ -406,7 +406,7 @@ DeviceNetworkEvents
 :brain: **Thought Process:** Looking for credential dumping tools I will now pivot into DeviceFileEvents. 
 Such tools would be placed into the malware location we found previously in C:\\ProgramData\\WindowsCache.
 Query will be filtered with folderpath correlating to that location. 
-I'm shown a download externally from http://78.141.196.6:8080/AdobeGC.exe and put into C:\ProgramData\WindowsCache and named ass "mm.exe".<br/>
+I'm shown a download externally from 78.141.196.6:8080/AdobeGC.exe and put into C:\ProgramData\WindowsCache and named ass "mm.exe".<br/>
 📌 **Finding (answer):** `mm.exe`  
 🔍 **Evidence:**  
 - **Host:** "azuki-sl"
